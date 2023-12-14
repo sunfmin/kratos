@@ -5,9 +5,11 @@ package testhelpers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
+	"net/http/httputil"
 	"testing"
 	"time"
 
@@ -93,17 +95,36 @@ func MockMakeAuthenticatedRequestWithClientAndID(t *testing.T, reg mockDeps, con
 	return body, res
 }
 
+type loggingRoundTripper struct {
+	Proxied http.RoundTripper
+}
+
+func (lrt *loggingRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
+	fmt.Printf("Request: %s %s", request.Method, request.URL)
+	body, _ := httputil.DumpRequest(request, true)
+	fmt.Printf("\n%s\n\n", body)
+	response, err := lrt.Proxied.RoundTrip(request)
+	if err != nil {
+		return response, err
+	}
+	body, _ = httputil.DumpResponse(response, true)
+	fmt.Printf("\n%s\n\n", body)
+
+	return response, err
+}
+
 func NewClientWithCookies(t *testing.T) *http.Client {
 	cj, err := cookiejar.New(&cookiejar.Options{})
 	require.NoError(t, err)
-	return &http.Client{Jar: cj}
+	return &http.Client{Jar: cj, Transport: &loggingRoundTripper{http.DefaultTransport}}
 }
 
 func NewNoRedirectClientWithCookies(t *testing.T) *http.Client {
 	cj, err := cookiejar.New(&cookiejar.Options{})
 	require.NoError(t, err)
 	return &http.Client{
-		Jar: cj,
+		Jar:       cj,
+		Transport: &loggingRoundTripper{http.DefaultTransport},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},

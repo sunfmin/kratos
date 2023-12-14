@@ -59,7 +59,7 @@ func NewConfigurationWithDefaults(t testing.TB) *config.Config {
 // NewFastRegistryWithMocks returns a registry with several mocks and an SQLite in memory database that make testing
 // easier and way faster. This suite does not work for e2e or advanced integration tests.
 func NewFastRegistryWithMocks(t *testing.T) (*config.Config, *driver.RegistryDefault) {
-	conf, reg := NewRegistryDefaultWithDSN(t, "")
+	conf, reg := NewRegistryDefaultWithDSN(t, "postgres://test:test@localhost:6514/test?sslmode=disable&max_conns=20&max_idle_conns=4")
 	reg.WithCSRFTokenGenerator(x.FakeCSRFTokenGenerator)
 	reg.WithCSRFHandler(x.NewFakeCSRFHandler(""))
 	reg.WithHooks(map[string]func(config.SelfServiceHook) interface{}{
